@@ -1,0 +1,144 @@
+# Code Analyzer Cape
+# A hybrid Cape combining static analysis tools with LLM insights
+
+id: code-analyzer
+name: Code Analyzer
+version: "1.0.0"
+description: >
+  Analyze code quality, find bugs, suggest improvements, and review code changes.
+  Combines static analysis tools with AI-powered insights for comprehensive
+  code review. Use when reviewing PRs, analyzing code quality, or finding bugs.
+
+metadata:
+  author: Cape System
+  license: MIT
+  source: native
+  tags:
+    - code
+    - review
+    - analysis
+    - quality
+    - bugs
+    - .py
+    - .js
+    - .ts
+  intents:
+    - review this code
+    - analyze code quality
+    - find bugs in code
+    - suggest code improvements
+    - check for security issues
+  examples:
+    - "Review this Python code for best practices"
+    - "Find potential bugs in this function"
+    - "Analyze the code quality of this module"
+
+interface:
+  inputs:
+    - name: code
+      type: string
+      required: true
+      description: Code to analyze (string or file path)
+    - name: language
+      type: string
+      required: false
+      description: Programming language (auto-detected if not specified)
+    - name: focus
+      type: array
+      required: false
+      default: ["quality", "bugs", "style"]
+      description: "Analysis focus areas: quality, bugs, style, security, performance"
+    - name: context
+      type: string
+      required: false
+      description: Additional context about the code
+  outputs:
+    - name: issues
+      type: array
+      description: List of identified issues
+    - name: suggestions
+      type: array
+      description: Improvement suggestions
+    - name: score
+      type: number
+      description: Overall quality score (0-100)
+    - name: summary
+      type: string
+      description: Analysis summary
+
+execution:
+  type: hybrid
+  steps:
+    - name: static_analysis
+      type: tool
+      tool_name: code_linter
+      description: Run static analysis tools
+    - name: ai_review
+      type: llm
+      model: default
+      description: AI-powered code review
+    - name: combine_results
+      type: code
+      language: python
+      description: Merge and deduplicate findings
+  parallel_steps:
+    - [static_analysis, ai_review]
+
+orchestration:
+  timeout: 120
+  retry:
+    max_attempts: 2
+    backoff: linear
+  fallback:
+    on_tool_failure: continue_with_llm
+    on_llm_failure: return_partial
+
+model_adapters:
+  openai:
+    model: gpt-4-turbo-preview
+    temperature: 0.1
+    system_prompt: |
+      You are an expert code reviewer. Analyze the provided code for:
+      1. Code quality and best practices
+      2. Potential bugs and edge cases
+      3. Security vulnerabilities
+      4. Performance issues
+      5. Readability and maintainability
+
+      Provide specific, actionable feedback with line references.
+  claude:
+    model: claude-3-opus-20240229
+    temperature: 0.1
+    system_prompt: |
+      You are an expert code reviewer specializing in thorough, constructive feedback.
+
+      When reviewing code:
+      - Identify bugs, security issues, and performance problems
+      - Suggest specific improvements with code examples
+      - Explain the reasoning behind each suggestion
+      - Consider edge cases and error handling
+      - Evaluate code organization and design patterns
+
+      Be precise with line numbers and provide actionable recommendations.
+  generic:
+    prompt_template: |
+      Analyze the following {language} code:
+
+      ```{language}
+      {code}
+      ```
+
+      Focus on: {focus}
+
+      Provide a detailed analysis including issues, suggestions, and an overall quality score.
+
+safety:
+  risk_level: low
+  sandboxed: true
+  allowed_operations:
+    - read
+    - analyze
+  max_input_size: 1048576  # 1MB
+  prohibited_patterns:
+    - "eval("
+    - "exec("

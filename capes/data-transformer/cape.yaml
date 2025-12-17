@@ -1,0 +1,194 @@
+# Data Transformer Cape
+# A workflow Cape for multi-step data transformation pipelines
+
+id: data-transformer
+name: Data Transformer
+version: "1.0.0"
+description: >
+  Transform data between formats, apply mappings, filter, aggregate, and reshape
+  data structures. Supports CSV, JSON, XML, YAML conversions and custom
+  transformations. Use for ETL operations, data migration, or format conversion.
+
+metadata:
+  author: Cape System
+  license: MIT
+  source: native
+  tags:
+    - data
+    - transform
+    - etl
+    - convert
+    - csv
+    - json
+    - xml
+    - yaml
+    - .csv
+    - .json
+    - .xml
+    - .yaml
+  intents:
+    - convert data format
+    - transform data structure
+    - map fields between formats
+    - filter and aggregate data
+    - reshape data
+  examples:
+    - "Convert this CSV to JSON"
+    - "Transform this data using the mapping"
+    - "Filter records where status is active"
+
+interface:
+  inputs:
+    - name: data
+      type: string
+      required: true
+      description: Input data (string, file path, or URL)
+    - name: source_format
+      type: string
+      required: false
+      description: "Source format: csv, json, xml, yaml (auto-detected)"
+    - name: target_format
+      type: string
+      required: true
+      description: "Target format: csv, json, xml, yaml, table"
+    - name: transformations
+      type: array
+      required: false
+      description: List of transformations to apply
+    - name: mapping
+      type: object
+      required: false
+      description: Field mapping configuration
+  outputs:
+    - name: result
+      type: string
+      description: Transformed data in target format
+    - name: stats
+      type: object
+      description: Transformation statistics
+    - name: errors
+      type: array
+      description: Any errors or warnings
+
+execution:
+  type: workflow
+  steps:
+    - id: detect_format
+      name: Detect Source Format
+      type: code
+      language: python
+      code: |
+        def detect_format(data):
+            if data.strip().startswith('{') or data.strip().startswith('['):
+                return 'json'
+            elif data.strip().startswith('<'):
+                return 'xml'
+            elif '---' in data[:50]:
+                return 'yaml'
+            else:
+                return 'csv'
+      inputs:
+        data: "{{inputs.data}}"
+      outputs:
+        detected_format: "{{result}}"
+
+    - id: parse_data
+      name: Parse Source Data
+      type: tool
+      tool_name: data_parser
+      depends_on: [detect_format]
+      inputs:
+        data: "{{inputs.data}}"
+        format: "{{steps.detect_format.detected_format}}"
+      outputs:
+        parsed: "{{result}}"
+
+    - id: apply_transforms
+      name: Apply Transformations
+      type: code
+      language: python
+      depends_on: [parse_data]
+      condition: "{{inputs.transformations}}"
+      inputs:
+        data: "{{steps.parse_data.parsed}}"
+        transforms: "{{inputs.transformations}}"
+      outputs:
+        transformed: "{{result}}"
+
+    - id: apply_mapping
+      name: Apply Field Mapping
+      type: code
+      language: python
+      depends_on: [apply_transforms]
+      condition: "{{inputs.mapping}}"
+      inputs:
+        data: "{{steps.apply_transforms.transformed or steps.parse_data.parsed}}"
+        mapping: "{{inputs.mapping}}"
+      outputs:
+        mapped: "{{result}}"
+
+    - id: convert_format
+      name: Convert to Target Format
+      type: tool
+      tool_name: data_serializer
+      depends_on: [apply_mapping]
+      inputs:
+        data: "{{steps.apply_mapping.mapped or steps.apply_transforms.transformed or steps.parse_data.parsed}}"
+        format: "{{inputs.target_format}}"
+      outputs:
+        result: "{{result}}"
+
+orchestration:
+  timeout: 300
+  retry:
+    max_attempts: 3
+    backoff: exponential
+  error_handling:
+    on_step_failure: abort
+    collect_partial_results: true
+
+model_adapters:
+  openai:
+    function_name: transform_data
+    function_description: Transform data between formats with optional mappings
+  claude:
+    tool_name: data_transformer
+    system_prompt: |
+      You are a data transformation assistant. Help users convert data between
+      formats (CSV, JSON, XML, YAML) and apply transformations like filtering,
+      mapping fields, and reshaping structures.
+
+      When processing:
+      1. Detect the source format automatically
+      2. Parse the data correctly
+      3. Apply any requested transformations
+      4. Convert to the target format
+      5. Report statistics and any issues
+  generic:
+    prompt_template: |
+      Transform the following data from {source_format} to {target_format}:
+
+      Input:
+      {data}
+
+      Transformations: {transformations}
+      Field mapping: {mapping}
+
+      Provide the transformed output and any relevant statistics.
+
+safety:
+  risk_level: medium
+  sandboxed: true
+  allowed_operations:
+    - read
+    - transform
+    - write
+  max_input_size: 104857600  # 100MB
+  max_output_size: 104857600
+  resource_limits:
+    memory_mb: 512
+    cpu_seconds: 60
+
+cost:
+  estimated_tokens: 1000
+  max_tokens: 10000

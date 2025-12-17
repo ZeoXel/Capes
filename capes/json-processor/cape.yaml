@@ -1,0 +1,104 @@
+# JSON Processor Cape
+# A tool-type Cape for JSON processing and transformation
+
+id: json-processor
+name: JSON Processor
+version: "1.0.0"
+description: >
+  Process, validate, transform, and query JSON data. Supports JSONPath queries,
+  schema validation, format conversion, and data extraction. Use when working
+  with JSON files, API responses, or configuration data.
+
+metadata:
+  author: Cape System
+  license: MIT
+  source: native
+  tags:
+    - json
+    - data
+    - transform
+    - validate
+    - .json
+  intents:
+    - process json data
+    - validate json schema
+    - transform json format
+    - extract data from json
+    - query json with jsonpath
+  examples:
+    - "Parse this JSON and extract all user names"
+    - "Validate this JSON against the schema"
+    - "Convert this JSON to a flattened format"
+
+interface:
+  inputs:
+    - name: data
+      type: string
+      required: true
+      description: JSON data as string or file path
+    - name: operation
+      type: string
+      required: false
+      default: parse
+      description: "Operation: parse, validate, transform, query, flatten"
+    - name: query
+      type: string
+      required: false
+      description: JSONPath query expression
+    - name: schema
+      type: string
+      required: false
+      description: JSON Schema for validation
+  outputs:
+    - name: result
+      type: object
+      description: Processed JSON result
+    - name: valid
+      type: boolean
+      description: Validation result (for validate operation)
+    - name: errors
+      type: array
+      description: Validation errors if any
+
+execution:
+  type: tool
+  tool_name: json_processor
+  tool_config:
+    operations:
+      - parse
+      - validate
+      - transform
+      - query
+      - flatten
+      - pretty
+    max_size_mb: 10
+
+orchestration:
+  timeout: 30
+  retry:
+    max_attempts: 2
+    backoff: exponential
+
+model_adapters:
+  openai:
+    function_name: process_json
+    function_description: Process and transform JSON data
+  claude:
+    tool_name: json_processor
+    system_prompt: |
+      You are a JSON processing assistant. When the user provides JSON data,
+      analyze it and apply the requested operation. Available operations:
+      - parse: Parse and return structured data
+      - validate: Validate against a schema
+      - transform: Apply transformations
+      - query: Execute JSONPath queries
+      - flatten: Flatten nested structures
+      - pretty: Format with proper indentation
+
+safety:
+  risk_level: low
+  sandboxed: true
+  allowed_operations:
+    - read
+    - transform
+  max_output_size: 10485760  # 10MB
