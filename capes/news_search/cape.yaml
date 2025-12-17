@@ -1,0 +1,54 @@
+id: news-search
+name: News Search
+version: "1.0.0"
+description: |
+  Search for recent news articles using DuckDuckGo News.
+  Use when user asks about current events, breaking news, latest headlines,
+  or any topic requiring recent news coverage.
+
+metadata:
+  tags:
+    - search
+    - news
+    - realtime
+    - headlines
+    - current-events
+  intents:
+    - search news
+    - find news articles
+    - get latest news
+    - what's happening
+    - breaking news
+    - current events
+    - 新闻
+    - 头条
+    - 最新消息
+  source: native
+
+interface:
+  input_schema:
+    type: object
+    properties:
+      query:
+        type: string
+        description: News search query keywords
+    required:
+      - query
+  output_schema:
+    type: object
+    properties:
+      results:
+        type: array
+        description: News articles with title, url, snippet, date, source
+      summary:
+        type: string
+        description: Summary of news findings
+
+execution:
+  type: tool
+  entrypoint: news_search
+  timeout_seconds: 30
+
+safety:
+  risk_level: low
+  estimated_cost_usd: 0.001
