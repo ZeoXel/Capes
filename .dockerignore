@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.mypy_cache
+.pytest_cache
+*.egg-info
+dist
+build
+.eggs
+
+# 环境
+.env
+.env.*
+!.env.example
+.venv
+venv
+ENV
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# 测试文件
+test_*.py
+tests/
+pytest.ini
+
+# 临时文件
+*.log
+*.tmp
+tmp/
+temp/
+
+# 本地存储 (Railway 会创建新的)
+.cape_storage/
+output/
+storage/
+
+# 前端 (不需要)
+web/
+
+# 文档 (可选保留)
+# docs/
+
+# 示例和演示
+examples/
+demo_*.py
+
+# Playwright MCP (不需要)
+.playwright-mcp/
