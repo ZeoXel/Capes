@@ -67,6 +67,7 @@ class ChatRequest(BaseModel):
     model: str = Field(default="gemini-2.5-flash", description="Model to use")
     enabled_capes: Optional[List[str]] = Field(default=None, description="Enabled cape IDs")
     stream: bool = Field(default=True, description="Stream response")
+    session_id: Optional[str] = Field(default=None, description="Session ID for context persistence")
 
 
 class ChatMessage(BaseModel):
@@ -83,6 +84,7 @@ class ChatResponse(BaseModel):
     execution_time_ms: float = 0
     tokens_used: int = 0
     cost_usd: float = 0
+    session_id: str = Field(..., description="Session ID for context persistence")
 
 
 # ============================================================
@@ -133,12 +135,43 @@ class ModelsResponse(BaseModel):
 
 
 # ============================================================
+# Pack Schemas
+# ============================================================
+
+class PackResponse(BaseModel):
+    """Pack response model."""
+    name: str
+    display_name: str
+    description: str
+    version: str
+    icon: Optional[str] = None
+    color: Optional[str] = None
+    target_users: List[str] = Field(default_factory=list)
+    scenarios: List[str] = Field(default_factory=list)
+    cape_ids: List[str] = Field(default_factory=list)
+    cape_count: int = 0
+
+
+class PackDetailResponse(PackResponse):
+    """Detailed Pack response with capes."""
+    capes: List[CapeResponse] = Field(default_factory=list)
+
+
+class PacksResponse(BaseModel):
+    """All packs response."""
+    packs: List[PackResponse]
+    total_packs: int
+    total_capes_in_packs: int
+
+
+# ============================================================
 # Stats Schemas
 # ============================================================
 
 class StatsResponse(BaseModel):
     """System statistics response."""
     total_capes: int
+    total_packs: int = 0
     total_executions: int
     success_rate: float
     avg_execution_time_ms: float
@@ -146,3 +179,4 @@ class StatsResponse(BaseModel):
     total_cost_usd: float
     by_source: Dict[str, int] = Field(default_factory=dict)
     by_type: Dict[str, int] = Field(default_factory=dict)
+    by_pack: Dict[str, int] = Field(default_factory=dict)

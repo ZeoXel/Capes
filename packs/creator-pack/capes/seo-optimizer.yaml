@@ -1,0 +1,213 @@
+# SEO Optimizer Cape - SEO 优化
+# 优化内容的搜索可见性
+
+id: seo-optimizer
+name: SEO优化
+version: "1.0.0"
+description: >
+  分析和优化内容的 SEO 表现，包括关键词密度、标题优化、
+  结构调整等，提升搜索引擎和平台内搜索的可见性。
+
+metadata:
+  author: Cape System
+  license: MIT
+  source: native
+  tags:
+    - seo
+    - keywords
+    - optimization
+    - search
+  intents:
+    - SEO优化
+    - 关键词优化
+    - 搜索优化
+    - 优化排名
+  examples:
+    - "帮我优化这篇文章的 SEO"
+    - "分析一下这个内容的关键词密度"
+    - "让这篇文章更容易被搜索到"
+
+interface:
+  inputs:
+    - name: content
+      type: string
+      required: true
+      description: 待优化的内容
+    - name: target_keywords
+      type: array
+      required: false
+      description: 目标关键词列表
+    - name: platform
+      type: string
+      required: false
+      default: baidu
+      description: "目标平台: google/baidu/xiaohongshu/zhihu/douyin"
+    - name: content_type
+      type: string
+      required: false
+      description: 内容类型(文章/产品页/落地页等)
+  outputs:
+    - name: score
+      type: integer
+      description: SEO 评分(0-100)
+    - name: issues
+      type: array
+      description: 发现的问题
+    - name: suggestions
+      type: array
+      description: 优化建议
+    - name: optimized_title
+      type: string
+      description: 优化后的标题
+    - name: optimized_content
+      type: string
+      description: 优化后的内容
+    - name: keyword_analysis
+      type: object
+      description: 关键词分析
+    - name: meta_description
+      type: string
+      description: 推荐的摘要描述
+
+execution:
+  type: hybrid
+  timeout_seconds: 60
+  max_retries: 1
+  steps:
+    - name: analyze
+      type: llm
+      description: 分析当前 SEO 状况
+    - name: optimize
+      type: llm
+      description: 生成优化版本
+
+model_adapters:
+  openai:
+    model: gpt-4o
+    temperature: 0.3
+    system_prompt: |
+      你是 SEO 优化专家，帮助优化内容的搜索可见性。
+
+      ## 分析维度
+
+      ### 1. 标题优化
+      - 是否包含核心关键词
+      - 长度是否合适（50-60 字符最佳）
+      - 是否有吸引力
+
+      ### 2. 关键词分析
+      - 关键词密度（建议 1-3%）
+      - 关键词分布（标题、开头、正文、结尾）
+      - 长尾关键词覆盖
+      - 语义相关词
+
+      ### 3. 内容结构
+      - 是否有清晰的 H1/H2/H3 层级
+      - 段落长度是否适中
+      - 是否有列表和要点
+      - 是否有内链/外链
+
+      ### 4. 可读性
+      - 句子长度
+      - 段落长度
+      - 专业术语使用
+
+      ### 5. 元数据
+      - Meta Description（150-160 字符）
+      - Alt 标签建议
+
+      ## 平台特化
+
+      ### 百度 SEO
+      - 中文分词友好
+      - 原创度重要
+      - 标题包含核心词
+
+      ### 小红书 SEO
+      - 标签很重要
+      - 开头包含关键词
+      - 图文匹配
+
+      ### 知乎 SEO
+      - 问题形式标题
+      - 专业深度内容
+      - 引用和数据
+
+      ### 抖音 SEO
+      - 话题标签
+      - 视频描述关键词
+      - 热门音乐/话题
+
+      ## 输出格式
+      ```
+      ## SEO 分析报告
+
+      **综合评分**：XX/100
+
+      ### 发现的问题
+      1. [问题1]
+      2. [问题2]
+
+      ### 优化建议
+      1. [建议1]
+      2. [建议2]
+
+      ### 关键词分析
+      - 目标关键词：xxx
+      - 当前密度：x%
+      - 建议密度：x%
+      - 缺失的相关词：xxx
+
+      ### 优化后的标题
+      [优化后的标题]
+
+      ### 推荐摘要(Meta Description)
+      [150字以内的摘要]
+
+      ### 优化后的内容
+      [带有优化标记的内容]
+      ```
+
+  claude:
+    model: claude-3-5-sonnet-20241022
+    temperature: 0.3
+    system_prompt: |
+      你是 SEO 专家，分析和优化内容的搜索表现。
+
+      分析要点：
+      - 标题：是否包含关键词、长度、吸引力
+      - 关键词：密度、分布、长尾词
+      - 结构：标题层级、段落、列表
+      - 可读性：句子长度、专业术语
+
+      输出：
+      - SEO 评分
+      - 问题列表
+      - 优化建议
+      - 优化后版本
+
+  generic:
+    prompt_template: |
+      请分析并优化以下内容的 SEO 表现。
+
+      **内容**：
+      {content}
+
+      **目标关键词**：{target_keywords}
+      **目标平台**：{platform}
+
+      请提供：
+      1. SEO 评分(0-100)
+      2. 发现的问题
+      3. 优化建议
+      4. 优化后的标题
+      5. 优化后的内容
+      6. 关键词密度分析
+
+safety:
+  risk_level: low
+  sandboxed: true
+  allowed_operations:
+    - read
+    - analyze
+  max_input_size: 102400

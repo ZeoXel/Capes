@@ -25,6 +25,7 @@ class Settings:
         base_dir = Path(__file__).parent.parent
         self.capes_dir = base_dir / "capes"
         self.skills_dir = base_dir / "skills"
+        self.packs_dir = base_dir / "packs"  # Cape Packs directory
 
         # CORS
         self.cors_origins = os.environ.get(
@@ -52,6 +53,7 @@ def get_registry() -> CapeRegistry:
         _registry = CapeRegistry(
             capes_dir=settings.capes_dir,
             skills_dir=settings.skills_dir,
+            packs_dir=settings.packs_dir,
             auto_load=True,
             use_embeddings=True,
         )

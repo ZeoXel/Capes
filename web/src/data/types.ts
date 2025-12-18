@@ -38,9 +38,35 @@ export interface ExecutionResult {
 
 export interface SystemStats {
   total_capes: number;
+  total_packs: number;
   total_executions: number;
   success_rate: number;
   avg_execution_time: number;
   total_tokens: number;
   total_cost: number;
+  by_pack: Record<string, number>;
+}
+
+// Pack types
+export interface Pack {
+  name: string;
+  display_name: string;
+  description: string;
+  version: string;
+  icon?: string;
+  color?: string;
+  target_users: string[];
+  scenarios: string[];
+  cape_ids: string[];
+  cape_count: number;
+}
+
+export interface PackDetail extends Pack {
+  capes: Cape[];
+}
+
+export interface PacksResponse {
+  packs: Pack[];
+  total_packs: number;
+  total_capes_in_packs: number;
 }

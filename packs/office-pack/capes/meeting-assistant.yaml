@@ -1,0 +1,187 @@
+# Meeting Assistant Cape - 会议助手
+# 会议记录、纪要生成、待办提取
+
+id: meeting-assistant
+name: 会议助手
+version: "1.0.0"
+description: >
+  整理会议记录，生成结构化会议纪要，提取决策事项和待办任务。
+  支持多种会议类型，输出专业规范的会议文档。
+
+metadata:
+  author: Cape System
+  license: MIT
+  source: native
+  tags:
+    - meeting
+    - notes
+    - minutes
+    - action-items
+    - summary
+  intents:
+    - 会议纪要
+    - 会议记录
+    - 整理会议
+    - 待办事项
+    - 会议总结
+  examples:
+    - "帮我整理这段会议记录"
+    - "生成会议纪要，提取待办事项"
+    - "总结一下会议的关键决策"
+
+interface:
+  inputs:
+    - name: content
+      type: string
+      required: true
+      description: 会议录音转写文本、笔记或速记
+    - name: meeting_type
+      type: string
+      required: false
+      default: general
+      description: "会议类型: standup(站会), review(评审), planning(规划), brainstorm(脑暴), decision(决策), general(常规)"
+    - name: participants
+      type: array
+      required: false
+      description: 参会人员列表
+    - name: meeting_title
+      type: string
+      required: false
+      description: 会议主题
+    - name: meeting_date
+      type: string
+      required: false
+      description: 会议日期
+  outputs:
+    - name: title
+      type: string
+      description: 会议标题
+    - name: summary
+      type: string
+      description: 会议摘要(3-5句话)
+    - name: key_points
+      type: array
+      description: 关键讨论点
+    - name: decisions
+      type: array
+      description: 会议决策
+    - name: action_items
+      type: array
+      description: 待办事项(含负责人和截止日期)
+    - name: next_steps
+      type: array
+      description: 后续计划
+    - name: open_questions
+      type: array
+      description: 未解决的问题
+
+execution:
+  type: llm
+  timeout_seconds: 60
+  max_retries: 1
+
+model_adapters:
+  openai:
+    model: gpt-4o
+    temperature: 0.3
+    system_prompt: |
+      你是一位专业的会议记录员，擅长从会议内容中提取关键信息。
+
+      ## 提取原则
+      1. **区分讨论和决策** - 讨论的内容 vs 最终确定的结论
+      2. **明确责任归属** - 每个待办必须有负责人
+      3. **时间约束** - 尽量明确截止时间
+      4. **保持客观** - 不添加主观判断
+      5. **保留原话** - 重要观点使用参会者原话
+
+      ## 会议类型适配
+
+      ### standup (站会)
+      - 关注：昨日完成、今日计划、阻塞问题
+      - 待办：明确每人今日任务
+
+      ### review (评审)
+      - 关注：评审结果、通过/不通过、修改意见
+      - 待办：修改项及负责人
+
+      ### planning (规划)
+      - 关注：目标、里程碑、资源分配
+      - 待办：具体任务拆解
+
+      ### brainstorm (脑暴)
+      - 关注：提出的想法、可行的方案
+      - 待办：后续验证或调研
+
+      ### decision (决策)
+      - 关注：决策事项、决策依据、执行方案
+      - 待办：决策后的行动项
+
+      ## 输出格式
+
+      ```markdown
+      # [会议标题]
+
+      **日期**：YYYY-MM-DD
+      **参会人**：xxx, xxx, xxx
+
+      ## 会议摘要
+      [3-5句话概述]
+
+      ## 关键讨论
+      1. [讨论点1]
+      2. [讨论点2]
+
+      ## 会议决策
+      - [决策1]
+      - [决策2]
+
+      ## 待办事项
+      | 任务 | 负责人 | 截止日期 |
+      |------|--------|----------|
+      | xxx  | xxx    | xxx      |
+
+      ## 后续计划
+      - [下一步1]
+
+      ## 待确认事项
+      - [问题1]
+      ```
+
+  claude:
+    model: claude-3-5-sonnet-20241022
+    temperature: 0.3
+    system_prompt: |
+      你是专业的会议记录整理专家。
+
+      从会议内容中提取：
+      1. 摘要：会议讨论了什么，达成了什么
+      2. 关键点：重要的讨论内容
+      3. 决策：明确做出的决定
+      4. 待办：需要执行的任务，必须包含负责人
+      5. 问题：尚未解决的事项
+
+      原则：
+      - 讨论内容和最终决策要区分清楚
+      - 待办事项必须可执行、可追踪
+      - 如果信息不完整，标注 [待确认]
+      - 保持客观，用参会者的原话标注重要观点
+
+  generic:
+    prompt_template: |
+      请帮我整理以下会议记录，生成结构化的会议纪要。
+
+      **会议类型**：{meeting_type}
+      **参会人员**：{participants}
+
+      **会议内容**：
+      {content}
+
+      请输出：会议摘要、关键讨论点、决策事项、待办任务(含负责人和截止日期)、后续计划。
+
+safety:
+  risk_level: low
+  sandboxed: true
+  allowed_operations:
+    - read
+    - analyze
+  max_input_size: 204800

@@ -1,0 +1,53 @@
+# Creator Pack - 内容创作包
+# 面向内容创作者的全能工具包
+
+name: creator-pack
+display_name: 内容创作包
+version: 1.0.0
+icon: pen-tool
+color: "#EC4899"
+
+description: |
+  面向内容创作者的全能工具包，覆盖选题策划、内容生产、
+  多平台适配、SEO 优化等创作全流程。
+
+target_users:
+  - 自媒体创作者
+  - 内容运营
+  - 新媒体编辑
+  - 文案策划
+  - 品牌营销
+
+scenarios:
+  - 公众号/头条长文创作
+  - 小红书/抖音短内容
+  - 营销文案撰写
+  - 选题策划与热点追踪
+  - 内容改写与多平台分发
+
+platforms:
+  - wechat      # 微信公众号
+  - xiaohongshu # 小红书
+  - douyin      # 抖音
+  - zhihu       # 知乎
+  - weibo       # 微博
+  - bilibili    # B站
+  - toutiao     # 头条号
+
+capes:
+  - content-writer
+  - title-generator
+  - copywriter
+  - content-repurposer
+  - seo-optimizer
+
+workflows:
+  - viral-content-flow
+  - multi-platform-flow
+  - daily-topic-flow
+
+dependencies:
+  required: []
+  optional:
+    - trend-api
+    - keyword-api

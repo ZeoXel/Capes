@@ -137,21 +137,53 @@ class CapeMatcher:
         if not cape.metadata.intents:
             return 0.0
 
-        matches = 0
+        best_match = 0.0
         for intent in cape.metadata.intents:
-            # Check if intent phrase appears in query
             intent_lower = intent.lower()
+            score = 0.0
+
+            # 1. Exact phrase match (highest priority)
             if intent_lower in query or query in intent_lower:
-                matches += 1
+                score = 1.0
+            # 2. Chinese character overlap matching
+            elif self._has_chinese(intent_lower):
+                char_overlap = self._chinese_char_overlap(query, intent_lower)
+                if char_overlap >= 0.6:  # At least 60% key characters match
+                    score = char_overlap
+            # 3. Word overlap (for English)
+            else:
+                intent_words = set(intent_lower.split())
+                query_words = set(query.split())
+                overlap = len(intent_words & query_words)
+                if overlap >= 2:
+                    score = 0.5 + (overlap / len(intent_words)) * 0.5
 
-            # Check word overlap
-            intent_words = set(intent_lower.split())
-            query_words = set(query.split())
-            overlap = len(intent_words & query_words)
-            if overlap >= 2:
-                matches += 0.5
+            best_match = max(best_match, score)
 
-        return min(1.0, matches / max(len(cape.metadata.intents), 1))
+        return best_match
+
+    def _has_chinese(self, text: str) -> bool:
+        """Check if text contains Chinese characters."""
+        for char in text:
+            if '\u4e00' <= char <= '\u9fff':
+                return True
+        return False
+
+    def _chinese_char_overlap(self, query: str, intent: str) -> float:
+        """Calculate character overlap ratio for Chinese text."""
+        # Remove common characters that don't carry meaning
+        common_chars = set('的是了在有和与或者为被给把被让使能会要可以这那些个人我你他她它们')
+
+        # Get meaningful characters from intent
+        intent_chars = set(char for char in intent if '\u4e00' <= char <= '\u9fff')
+        intent_chars -= common_chars
+
+        if not intent_chars:
+            return 0.0
+
+        # Count how many intent characters appear in query
+        matches = sum(1 for char in intent_chars if char in query)
+        return matches / len(intent_chars)
 
     def _match_keywords(self, query: str, cape: Cape) -> float:
         """Match against tags and description keywords."""

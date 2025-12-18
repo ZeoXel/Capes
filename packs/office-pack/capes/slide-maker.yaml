@@ -1,0 +1,153 @@
+# Slide Maker Cape - 演示文稿
+# 从大纲或内容生成 PPT 结构和内容
+
+id: slide-maker
+name: 演示文稿
+version: "1.0.0"
+description: >
+  从主题、大纲或内容生成演示文稿结构。输出包含每页标题、内容、
+  演讲备注和视觉建议，可直接用于制作 PPT。
+
+metadata:
+  author: Cape System
+  license: MIT
+  source: native
+  tags:
+    - presentation
+    - ppt
+    - slides
+    - powerpoint
+    - keynote
+  intents:
+    - 做PPT
+    - 做幻灯片
+    - 演示文稿
+    - 汇报材料
+    - 制作演示
+    - PPT大纲
+  examples:
+    - "帮我做一份产品介绍的PPT"
+    - "把这份报告转成汇报PPT"
+    - "做一个10页的项目汇报演示文稿"
+
+interface:
+  inputs:
+    - name: topic
+      type: string
+      required: true
+      description: 演示主题
+    - name: content
+      type: string
+      required: false
+      description: 原始内容、大纲或参考资料
+    - name: slides_count
+      type: integer
+      required: false
+      default: 10
+      description: 目标页数(3-30页)
+    - name: style
+      type: string
+      required: false
+      default: business
+      description: "风格: business(商务), creative(创意), minimal(简约), academic(学术)"
+    - name: audience
+      type: string
+      required: false
+      description: 目标听众(如：公司高管、客户、团队成员)
+    - name: duration
+      type: integer
+      required: false
+      description: 预计演讲时长(分钟)
+  outputs:
+    - name: title
+      type: string
+      description: 演示文稿标题
+    - name: slides
+      type: array
+      description: 幻灯片列表
+    - name: outline
+      type: string
+      description: 整体大纲概要
+
+execution:
+  type: llm
+  timeout_seconds: 90
+  max_retries: 1
+
+model_adapters:
+  openai:
+    model: gpt-4o
+    temperature: 0.7
+    system_prompt: |
+      你是一位演示设计专家，擅长将内容转化为有说服力的演示文稿。
+
+      ## 设计原则
+      1. **每页一个核心观点** - 避免信息过载
+      2. **6×6 原则** - 每页不超过 6 个要点，每点不超过 6 个词
+      3. **视觉思维** - 为每页提供图表/图片建议
+      4. **故事线清晰** - 有起承转合，逻辑连贯
+      5. **开头抓人，结尾有力**
+
+      ## 标准结构(可根据需要调整)
+      1. 封面 - 标题 + 副标题 + 演讲者
+      2. 目录/议程 - 整体结构预览
+      3. 背景/问题 - 为什么要讲这个
+      4. 核心内容 - 3-5 个主要部分
+      5. 关键数据 - 数据支撑(如适用)
+      6. 总结/建议 - 核心要点回顾
+      7. 下一步/行动项 - 明确后续
+      8. Q&A/致谢 - 结束页
+
+      ## 输出格式
+      请为每一页输出：
+      ```
+      ### 第 N 页: [页面标题]
+      **布局**: [title/content/two-column/image/chart/quote]
+      **内容**:
+      - 要点 1
+      - 要点 2
+      - ...
+      **演讲备注**: [这页要讲什么，怎么讲]
+      **视觉建议**: [建议的图表类型或配图方向]
+      ```
+
+  claude:
+    model: claude-3-5-sonnet-20241022
+    temperature: 0.7
+    system_prompt: |
+      你是一位专业的演示设计顾问，擅长结构化表达和视觉叙事。
+
+      设计演示文稿时遵循：
+      - 一页一个核心信息，不要堆砌
+      - 文字精简，要点式表达
+      - 数据可视化，避免大段文字
+      - 故事线清晰，逻辑递进
+      - 考虑听众背景，调整深度
+
+      为每页提供：
+      1. 标题（简洁有力）
+      2. 内容要点（3-5 个）
+      3. 演讲备注（怎么讲这页）
+      4. 视觉建议（图表/配图方向）
+
+  generic:
+    prompt_template: |
+      请帮我设计一份演示文稿。
+
+      **主题**：{topic}
+      **目标页数**：{slides_count} 页
+      **风格**：{style}
+      **听众**：{audience}
+
+      **参考内容**：
+      {content}
+
+      请为每一页提供：标题、内容要点、演讲备注、视觉建议。
+
+safety:
+  risk_level: low
+  sandboxed: true
+  allowed_operations:
+    - read
+    - generate
+  max_input_size: 204800

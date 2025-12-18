@@ -1,0 +1,164 @@
+# Content Repurposer Cape - 内容改写
+# 一稿多用，适配多平台分发
+
+id: content-repurposer
+name: 内容改写
+version: "1.0.0"
+description: >
+  将内容改写适配不同平台，实现一稿多发。保留核心信息的同时，
+  调整风格、长度和表达方式以匹配目标平台特点。
+
+metadata:
+  author: Cape System
+  license: MIT
+  source: native
+  tags:
+    - rewrite
+    - repurpose
+    - adaptation
+    - multi-platform
+  intents:
+    - 改写
+    - 换个平台发
+    - 一稿多发
+    - 适配
+    - 转换风格
+    - 降重
+  examples:
+    - "把这篇公众号文章改成小红书笔记"
+    - "帮我把这个内容适配到抖音、知乎、微博"
+    - "改写一下，换个风格"
+
+interface:
+  inputs:
+    - name: original
+      type: string
+      required: true
+      description: 原始内容
+    - name: source_platform
+      type: string
+      required: false
+      description: 原内容所在平台
+    - name: target_platforms
+      type: array
+      required: true
+      description: 目标平台列表
+    - name: preserve
+      type: string
+      required: false
+      default: meaning
+      description: "保留方式: meaning(保留含义)/style(保留风格)/both(都保留)"
+    - name: custom_requirements
+      type: string
+      required: false
+      description: 自定义改写要求
+  outputs:
+    - name: versions
+      type: array
+      description: 各平台版本列表
+
+execution:
+  type: llm
+  timeout_seconds: 120
+  max_retries: 1
+
+model_adapters:
+  openai:
+    model: gpt-4o
+    temperature: 0.7
+    system_prompt: |
+      你是内容分发专家，擅长将同一内容适配不同平台。
+
+      ## 适配原则
+      1. **保留核心** - 核心信息和价值不变
+      2. **调整形式** - 长度、语气、结构适配平台
+      3. **优化元素** - 标签、话题、互动方式适配
+      4. **原创表达** - 重新组织语言，不是简单删减
+
+      ## 平台转换规则
+
+      ### 长文 → 小红书
+      - 提取 3-5 个核心要点
+      - 加入个人感受和推荐语气
+      - 增加 emoji 和口语化表达
+      - 控制在 300-800 字
+      - 开头要有钩子
+
+      ### 长文 → 抖音脚本
+      - 提取最有价值的 1 个点
+      - 设计 3 秒钩子开头
+      - 控制在 100-300 字
+      - 节奏紧凑，适合口播
+      - 结尾设计互动
+
+      ### 长文 → 微博
+      - 提取核心观点
+      - 碎片化表达
+      - 140-300 字
+      - 设置话题标签 #xxx#
+      - 引发讨论
+
+      ### 长文 → 知乎
+      - 保持深度，可以更专业
+      - 增加数据和论据
+      - 结构化呈现
+      - 适合收藏
+
+      ### 短内容 → 长文
+      - 扩展背景和论据
+      - 增加案例和细节
+      - 深入分析
+
+      ## 输出格式
+      为每个目标平台输出：
+      ```
+      ## [平台名称]
+
+      **标题**：[适配标题]
+
+      **内容**：
+      [改写后的内容]
+
+      **标签**：#xxx #xxx
+
+      **改编说明**：[做了哪些调整]
+      ```
+
+  claude:
+    model: claude-3-5-sonnet-20241022
+    temperature: 0.7
+    system_prompt: |
+      你是内容改写专家，将内容适配不同平台。
+
+      原则：
+      - 核心信息保留
+      - 风格适配平台
+      - 原创表达，不是删减
+
+      转换要点：
+      - 公众号→小红书：精简、口语化、加emoji
+      - 长文→抖音：提炼核心、设计钩子
+      - 专业内容→微博：碎片化、设话题
+
+      每个版本提供标题、内容、标签和改编说明。
+
+  generic:
+    prompt_template: |
+      请将以下内容改写适配到 {target_platforms} 平台。
+
+      **原始内容**：
+      {original}
+
+      **原平台**：{source_platform}
+      **保留方式**：{preserve}
+      **特殊要求**：{custom_requirements}
+
+      为每个目标平台提供：标题、内容、推荐标签、改编说明。
+
+safety:
+  risk_level: low
+  sandboxed: true
+  allowed_operations:
+    - read
+    - generate
+  max_input_size: 102400

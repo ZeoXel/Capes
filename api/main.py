@@ -22,6 +22,7 @@ from api.deps import get_settings, get_registry, get_runtime
 from api.routes.capes import router as capes_router
 from api.routes.chat import router as chat_router
 from api.routes.models import router as models_router
+from api.routes.packs import router as packs_router
 from api.schemas import StatsResponse
 
 # Create app
@@ -47,6 +48,7 @@ app.add_middleware(
 app.include_router(capes_router)
 app.include_router(chat_router)
 app.include_router(models_router)
+app.include_router(packs_router)
 
 
 @app.get("/")
@@ -73,6 +75,7 @@ def get_stats():
 
     return StatsResponse(
         total_capes=summary["total"],
+        total_packs=summary.get("total_packs", 0),
         total_executions=metrics["execution_count"],
         success_rate=100.0,  # TODO: track actual success rate
         avg_execution_time_ms=0,  # TODO: track
@@ -80,6 +83,7 @@ def get_stats():
         total_cost_usd=metrics["total_cost_usd"],
         by_source=summary["by_source"],
         by_type=summary["by_type"],
+        by_pack=summary.get("by_pack", {}),
     )
 
 

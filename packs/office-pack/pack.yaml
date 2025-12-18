@@ -1,0 +1,45 @@
+# Office Pack - 职场效能包
+# 面向职场人士的综合办公能力包
+
+name: office-pack
+display_name: 职场效能包
+version: 1.0.0
+icon: briefcase
+color: "#3B82F6"
+
+description: |
+  面向职场人士的综合办公能力包，覆盖文档处理、汇报演示、
+  数据分析、会议协作等核心办公场景。
+
+target_users:
+  - 企业员工
+  - 管理者
+  - 行政人员
+  - 项目经理
+
+scenarios:
+  - 撰写各类报告和方案
+  - 制作演示文稿
+  - 处理数据和表格
+  - 会议记录与跟进
+  - 邮件沟通
+
+capes:
+  - doc-writer
+  - slide-maker
+  - sheet-analyst
+  - meeting-assistant
+  - email-composer
+
+workflows:
+  - weekly-report
+  - meeting-flow
+  - data-report
+
+dependencies:
+  required: []
+  optional:
+    - pandoc
+    - libreoffice
+    - calendar-api
+    - email-api

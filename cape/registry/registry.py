@@ -23,12 +23,13 @@ class CapeRegistry:
 
     Responsibilities:
     - Load Capes from files (native and imported)
+    - Load Capes from Packs (organized capability packages)
     - Register Capes programmatically
     - Match user intents to Capes
     - Manage Cape lifecycle (add, remove, update)
 
     Usage:
-        registry = CapeRegistry(capes_dir="./capes")
+        registry = CapeRegistry(capes_dir="./capes", packs_dir="./packs")
 
         # Get Cape by ID
         cape = registry.get("json-processor")
@@ -45,6 +46,7 @@ class CapeRegistry:
         self,
         capes_dir: Optional[Path] = None,
         skills_dir: Optional[Path] = None,
+        packs_dir: Optional[Path] = None,
         auto_load: bool = True,
         use_embeddings: bool = True,
     ):
@@ -54,14 +56,17 @@ class CapeRegistry:
         Args:
             capes_dir: Directory containing Cape definitions (cape.yaml)
             skills_dir: Directory containing Claude Skills (SKILL.md) to import
+            packs_dir: Directory containing Cape Packs (pack.yaml + capes/)
             auto_load: Whether to automatically load on init
             use_embeddings: Whether to use semantic matching
         """
         self.capes_dir = Path(capes_dir) if capes_dir else None
         self.skills_dir = Path(skills_dir) if skills_dir else None
+        self.packs_dir = Path(packs_dir) if packs_dir else None
 
         # Registry storage
         self._capes: Dict[str, Cape] = {}
+        self._packs: Dict[str, Dict] = {}  # Pack metadata storage
 
         # Matcher for intent-based lookup
         self.matcher = CapeMatcher(use_embeddings=use_embeddings)
@@ -78,6 +83,10 @@ class CapeRegistry:
         # Load native Capes
         if self.capes_dir and self.capes_dir.exists():
             self._load_capes_dir(self.capes_dir)
+
+        # Load Cape Packs
+        if self.packs_dir and self.packs_dir.exists():
+            self._load_packs_dir(self.packs_dir)
 
         # Import Skills as Capes
         if self.skills_dir and self.skills_dir.exists():
@@ -110,6 +119,60 @@ class CapeRegistry:
         cape = Cape.from_dict(data)
         cape._path = cape_file.parent
         return cape
+
+    def _load_packs_dir(self, packs_dir: Path):
+        """Load Cape Packs from directory."""
+        for pack_path in packs_dir.iterdir():
+            if not pack_path.is_dir():
+                continue
+
+            pack_file = pack_path / "pack.yaml"
+            if not pack_file.exists():
+                pack_file = pack_path / "pack.yml"
+
+            if pack_file.exists():
+                try:
+                    self._load_pack(pack_path, pack_file)
+                except Exception as e:
+                    logger.error(f"Failed to load Pack from {pack_path}: {e}")
+
+    def _load_pack(self, pack_path: Path, pack_file: Path):
+        """Load a single Pack and its Capes."""
+        # Load pack metadata
+        content = pack_file.read_text(encoding="utf-8")
+        pack_data = yaml.safe_load(content)
+        pack_name = pack_data.get("name", pack_path.name)
+
+        # Store pack metadata
+        self._packs[pack_name] = {
+            "path": pack_path,
+            "metadata": pack_data,
+        }
+
+        logger.info(f"Loading Pack: {pack_name}")
+
+        # Load capes from pack's capes directory
+        capes_dir = pack_path / "capes"
+        if capes_dir.exists():
+            for cape_file in capes_dir.glob("*.yaml"):
+                try:
+                    cape = self._load_cape_file(cape_file)
+                    # Tag cape with pack source
+                    if "pack" not in cape.metadata.tags:
+                        cape.metadata.tags.append(f"pack:{pack_name}")
+                    self.register(cape)
+                except Exception as e:
+                    logger.error(f"Failed to load Cape from {cape_file}: {e}")
+
+            # Also try .yml extension
+            for cape_file in capes_dir.glob("*.yml"):
+                try:
+                    cape = self._load_cape_file(cape_file)
+                    if "pack" not in cape.metadata.tags:
+                        cape.metadata.tags.append(f"pack:{pack_name}")
+                    self.register(cape)
+                except Exception as e:
+                    logger.error(f"Failed to load Cape from {cape_file}: {e}")
 
     def _import_skills_dir(self, skills_dir: Path):
         """Import Skills as Capes."""
@@ -214,6 +277,38 @@ class CapeRegistry:
         """Get Capes with specific execution type."""
         return [c for c in self._capes.values() if c.execution.type.value == exec_type]
 
+    def filter_by_pack(self, pack_name: str) -> List[Cape]:
+        """Get Capes from a specific Pack."""
+        tag = f"pack:{pack_name}"
+        return [c for c in self._capes.values() if tag in c.metadata.tags]
+
+    # ==================== Pack Operations ====================
+
+    def get_packs(self) -> List[Dict[str, Any]]:
+        """Get all loaded Packs with their metadata."""
+        return [
+            {
+                "name": name,
+                "display_name": data["metadata"].get("display_name", name),
+                "description": data["metadata"].get("description", ""),
+                "version": data["metadata"].get("version", "1.0.0"),
+                "capes": data["metadata"].get("capes", []),
+                "target_users": data["metadata"].get("target_users", []),
+            }
+            for name, data in self._packs.items()
+        ]
+
+    def get_pack(self, pack_name: str) -> Optional[Dict[str, Any]]:
+        """Get a specific Pack's metadata."""
+        pack_data = self._packs.get(pack_name)
+        if not pack_data:
+            return None
+        return {
+            "name": pack_name,
+            "metadata": pack_data["metadata"],
+            "capes": self.filter_by_pack(pack_name),
+        }
+
     # ==================== Utility ====================
 
     def reload(self):
@@ -237,6 +332,7 @@ class CapeRegistry:
         """Get registry summary."""
         by_source = {}
         by_type = {}
+        by_pack = {}
 
         for cape in self._capes.values():
             source = cape.metadata.source.value
@@ -245,11 +341,20 @@ class CapeRegistry:
             exec_type = cape.execution.type.value
             by_type[exec_type] = by_type.get(exec_type, 0) + 1
 
+            # Count by pack
+            for tag in cape.metadata.tags:
+                if tag.startswith("pack:"):
+                    pack_name = tag.replace("pack:", "")
+                    by_pack[pack_name] = by_pack.get(pack_name, 0) + 1
+
         return {
             "total": len(self._capes),
+            "total_packs": len(self._packs),
             "by_source": by_source,
             "by_type": by_type,
+            "by_pack": by_pack,
             "cape_ids": self.list_ids(),
+            "pack_names": list(self._packs.keys()),
         }
 
     def __contains__(self, cape_id: str) -> bool:

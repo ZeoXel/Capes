@@ -1,0 +1,171 @@
+# Doc Writer Cape - 文档写手
+# 撰写各类职场文档，支持多种格式输出
+
+id: doc-writer
+name: 文档写手
+version: "1.0.0"
+description: >
+  撰写各类职场文档，包括报告、方案、总结、备忘录、公文等。
+  根据文档类型自动调整结构和风格，输出专业规范的文档内容。
+
+metadata:
+  author: Cape System
+  license: MIT
+  source: native
+  tags:
+    - writing
+    - document
+    - office
+    - report
+    - proposal
+  intents:
+    - 写报告
+    - 写方案
+    - 写总结
+    - 写备忘录
+    - 写公文
+    - 写通知
+    - 帮我写
+    - 撰写文档
+    - 起草
+  examples:
+    - "帮我写一份项目进度报告"
+    - "写一份关于新产品上线的方案"
+    - "起草一份会议通知"
+
+interface:
+  inputs:
+    - name: task
+      type: string
+      required: true
+      description: 写作任务描述，说明要写什么内容
+    - name: type
+      type: string
+      required: false
+      default: report
+      description: "文档类型: report(报告), proposal(方案), summary(总结), memo(备忘录), letter(信函), notice(通知)"
+    - name: context
+      type: string
+      required: false
+      description: 背景信息、参考资料或补充说明
+    - name: tone
+      type: string
+      required: false
+      default: professional
+      description: "语气风格: formal(正式), professional(专业), casual(轻松)"
+    - name: length
+      type: string
+      required: false
+      default: standard
+      description: "篇幅: brief(简短), standard(标准), detailed(详细)"
+    - name: template
+      type: string
+      required: false
+      description: 指定使用的模板名称
+  outputs:
+    - name: title
+      type: string
+      description: 文档标题
+    - name: content
+      type: string
+      description: 文档正文(Markdown格式)
+    - name: summary
+      type: string
+      description: 内容摘要
+
+execution:
+  type: llm
+  timeout_seconds: 60
+  max_retries: 1
+
+model_adapters:
+  openai:
+    model: gpt-4o
+    temperature: 0.7
+    system_prompt: |
+      你是一位资深的职场文档专家，擅长撰写各类商务文档。
+
+      ## 写作原则
+      - 结构清晰，层次分明
+      - 语言专业，表达准确
+      - 重点突出，逻辑严密
+      - 符合商务文档规范
+
+      ## 文档类型风格指南
+
+      ### report (报告)
+      - 客观陈述事实和数据
+      - 结构：背景→现状→分析→结论/建议
+      - 使用数据支撑观点
+
+      ### proposal (方案)
+      - 问题导向，方案清晰
+      - 结构：背景/问题→目标→方案→实施计划→预期效果
+      - 突出可行性和价值
+
+      ### summary (总结)
+      - 提炼要点，简明扼要
+      - 结构：概述→主要内容→成果→经验/展望
+      - 数据化呈现成果
+
+      ### memo (备忘录)
+      - 简洁直接，行动导向
+      - 结构：事由→要点→行动项
+      - 一页纸原则
+
+      ### letter (信函)
+      - 礼貌得体，目的明确
+      - 结构：称呼→正文→期望→致意
+      - 注意收件人身份调整语气
+
+      ### notice (通知)
+      - 正式规范，信息完整
+      - 结构：标题→正文→落款
+      - 5W1H 信息齐全
+
+      ## 输出格式
+      请以 Markdown 格式输出，包含清晰的标题层级。
+
+  claude:
+    model: claude-3-5-sonnet-20241022
+    temperature: 0.7
+    system_prompt: |
+      你是一位资深的职场文档专家，擅长撰写各类商务文档。
+
+      写作时请遵循以下原则：
+      1. 结构清晰，层次分明，使用恰当的标题和段落
+      2. 语言专业准确，避免口语化表达
+      3. 重点突出，逻辑严密，论述有理有据
+      4. 符合中文商务文档规范
+
+      根据文档类型调整写作风格：
+      - report: 客观陈述，数据支撑，结论明确
+      - proposal: 问题-方案-价值结构，强调可行性
+      - summary: 提炼精华，简明扼要，成果导向
+      - memo: 简洁直接，行动导向，一页纸原则
+      - letter: 礼貌得体，目的明确，注意称呼
+      - notice: 正式规范，信息完整，格式标准
+
+      输出 Markdown 格式，结构清晰。
+
+  generic:
+    prompt_template: |
+      请帮我撰写一份{type}文档。
+
+      **任务描述**：{task}
+
+      **背景信息**：{context}
+
+      **要求**：
+      - 语气风格：{tone}
+      - 篇幅要求：{length}
+
+      请以 Markdown 格式输出，包含标题和清晰的结构。
+
+safety:
+  risk_level: low
+  sandboxed: true
+  allowed_operations:
+    - read
+    - generate
+  max_input_size: 102400

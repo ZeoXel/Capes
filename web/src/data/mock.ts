@@ -164,9 +164,14 @@ export const mockExecutions: ExecutionResult[] = [
 
 export const mockStats: SystemStats = {
   total_capes: 6,
+  total_packs: 2,
   total_executions: 1247,
   success_rate: 94.5,
   avg_execution_time: 1250,
   total_tokens: 2450000,
   total_cost: 48.75,
+  by_pack: {
+    "office-pack": 5,
+    "creator-pack": 5,
+  },
 };

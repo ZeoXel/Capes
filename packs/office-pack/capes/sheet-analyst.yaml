@@ -1,0 +1,166 @@
+# Sheet Analyst Cape - 表格分析师
+# 数据处理、分析、可视化建议
+
+id: sheet-analyst
+name: 表格分析师
+version: "1.0.0"
+description: >
+  分析表格数据，提供数据洞察、清洗建议、公式生成和可视化推荐。
+  支持 Excel/CSV 数据，输出可直接应用的分析结果。
+
+metadata:
+  author: Cape System
+  license: MIT
+  source: native
+  tags:
+    - excel
+    - data
+    - analysis
+    - spreadsheet
+    - csv
+    - visualization
+  intents:
+    - 分析数据
+    - 处理表格
+    - Excel分析
+    - 数据清洗
+    - 做图表
+    - 数据透视
+    - 写公式
+    - 数据可视化
+  examples:
+    - "分析这份销售数据，找出趋势"
+    - "帮我清洗这份数据，去除异常值"
+    - "这个表格应该用什么图表展示"
+    - "写一个计算同比增长率的公式"
+
+interface:
+  inputs:
+    - name: data
+      type: string
+      required: true
+      description: 数据内容(CSV格式文本或数据描述)
+    - name: task
+      type: string
+      required: true
+      description: "任务类型: analyze(分析), clean(清洗), transform(转换), visualize(可视化建议), formula(公式生成)"
+    - name: question
+      type: string
+      required: false
+      description: 具体问题或需求说明
+    - name: columns
+      type: array
+      required: false
+      description: 重点关注的列名
+  outputs:
+    - name: summary
+      type: string
+      description: 分析摘要
+    - name: insights
+      type: array
+      description: 数据洞察列表
+    - name: recommendations
+      type: array
+      description: 建议列表
+    - name: formulas
+      type: array
+      description: Excel公式建议
+    - name: chart_suggestions
+      type: array
+      description: 图表建议
+
+execution:
+  type: hybrid
+  timeout_seconds: 60
+  max_retries: 1
+  steps:
+    - name: parse_data
+      type: code
+      description: 解析数据结构
+    - name: analyze
+      type: llm
+      description: 分析数据并生成洞察
+
+model_adapters:
+  openai:
+    model: gpt-4o
+    temperature: 0.3
+    system_prompt: |
+      你是一位数据分析专家，擅长从表格数据中发现洞察。
+
+      ## 分析框架
+
+      ### analyze (数据分析)
+      1. 数据概览：行数、列数、数据类型
+      2. 统计摘要：均值、中位数、标准差、分布
+      3. 趋势发现：时间序列趋势、环比/同比
+      4. 异常检测：离群值、缺失值
+      5. 相关性：变量间关系
+      6. 业务洞察：数据背后的业务含义
+
+      ### clean (数据清洗)
+      1. 识别问题：缺失值、重复值、异常值、格式不一致
+      2. 清洗建议：具体的处理方法
+      3. 清洗步骤：可执行的操作步骤
+
+      ### transform (数据转换)
+      1. 理解需求：目标数据格式
+      2. 转换逻辑：字段映射、计算逻辑
+      3. 实现步骤：Excel操作或公式
+
+      ### visualize (可视化建议)
+      1. 数据特点：适合什么类型的图表
+      2. 图表推荐：具体图表类型及原因
+      3. 设计建议：配色、标签、图例
+
+      ### formula (公式生成)
+      1. 理解需求：要实现什么计算
+      2. 公式设计：Excel/Google Sheets 公式
+      3. 使用说明：参数解释和示例
+
+      ## 输出要求
+      - 洞察要具体、可行动
+      - 公式要完整、可直接使用
+      - 建议要实用、易理解
+
+  claude:
+    model: claude-3-5-sonnet-20241022
+    temperature: 0.3
+    system_prompt: |
+      你是数据分析师，帮助用户理解和处理表格数据。
+
+      分析时：
+      - 先概述数据整体情况
+      - 指出关键发现和异常
+      - 给出可执行的建议
+      - 提供具体的公式或步骤
+
+      公式生成时：
+      - 使用 Excel 兼容语法
+      - 解释每个参数含义
+      - 给出使用示例
+
+      可视化建议时：
+      - 说明为什么选这种图表
+      - 指出关键的设计要点
+
+  generic:
+    prompt_template: |
+      请帮我{task}以下数据：
+
+      **数据**：
+      ```
+      {data}
+      ```
+
+      **具体需求**：{question}
+
+      请提供详细的分析结果、洞察和建议。
+
+safety:
+  risk_level: low
+  sandboxed: true
+  allowed_operations:
+    - read
+    - analyze
+  max_input_size: 1048576

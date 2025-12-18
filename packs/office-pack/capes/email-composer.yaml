@@ -1,0 +1,154 @@
+# Email Composer Cape - 邮件助手
+# 撰写、回复、优化商务邮件
+
+id: email-composer
+name: 邮件助手
+version: "1.0.0"
+description: >
+  撰写、回复、优化商务邮件。根据收件人关系和邮件目的自动调整
+  语气和格式，输出专业得体的邮件内容。
+
+metadata:
+  author: Cape System
+  license: MIT
+  source: native
+  tags:
+    - email
+    - communication
+    - business
+    - writing
+  intents:
+    - 写邮件
+    - 回复邮件
+    - 邮件怎么写
+    - 帮我写封邮件
+    - 润色邮件
+    - 翻译邮件
+  examples:
+    - "帮我写一封邀请客户参加产品发布会的邮件"
+    - "回复这封邮件，婉拒对方的请求"
+    - "把这封邮件改得更正式一些"
+
+interface:
+  inputs:
+    - name: task
+      type: string
+      required: true
+      description: "任务类型: compose(撰写), reply(回复), polish(润色), translate(翻译)"
+    - name: purpose
+      type: string
+      required: true
+      description: 邮件目的，说明要传达什么信息
+    - name: recipient
+      type: string
+      required: false
+      description: "收件人角色/关系，如: 上级、同事、客户、供应商"
+    - name: context
+      type: string
+      required: false
+      description: 背景信息或原始邮件内容(回复/润色时需要)
+    - name: tone
+      type: string
+      required: false
+      default: formal
+      description: "语气: formal(正式), friendly(友好), urgent(紧急), apologetic(道歉)"
+    - name: language
+      type: string
+      required: false
+      default: zh
+      description: "输出语言: zh(中文), en(英文)"
+  outputs:
+    - name: subject
+      type: string
+      description: 邮件主题
+    - name: body
+      type: string
+      description: 邮件正文
+    - name: tips
+      type: array
+      description: 发送建议
+
+execution:
+  type: llm
+  timeout_seconds: 30
+  max_retries: 1
+
+model_adapters:
+  openai:
+    model: gpt-4o
+    temperature: 0.7
+    system_prompt: |
+      你是一位商务沟通专家，擅长撰写得体、高效的商务邮件。
+
+      ## 写作原则
+      1. **主题行** - 简洁明了，体现核心内容，让收件人一眼知道重点
+      2. **开头** - 适当问候后直接说明目的，不要绕弯子
+      3. **正文** - 逻辑清晰，分段合理，重点突出
+      4. **行动项** - 明确期望对方做什么，便于回应
+      5. **结尾** - 礼貌得体，表达感谢或期待
+
+      ## 根据收件人调整风格
+      - **上级**：尊重、简洁、重点突出、汇报清晰
+      - **同事**：友好、直接、协作导向
+      - **客户**：专业、周到、服务意识、适度热情
+      - **供应商**：专业、明确、条款清晰
+      - **外部**：正式、完整、无歧义
+
+      ## 语气类型
+      - **formal**：正式商务，措辞严谨
+      - **friendly**：友好亲切，适度轻松
+      - **urgent**：紧急事项，强调时效
+      - **apologetic**：诚恳道歉，承担责任
+
+      ## 输出格式
+      ```
+      **主题**: [邮件主题]
+
+      **正文**:
+      [邮件内容]
+
+      **发送建议**:
+      - [建议1]
+      - [建议2]
+      ```
+
+  claude:
+    model: claude-3-5-sonnet-20241022
+    temperature: 0.7
+    system_prompt: |
+      你是商务沟通专家，帮助用户撰写专业得体的邮件。
+
+      邮件写作要点：
+      - 主题行要能概括邮件核心
+      - 开头直奔主题，不要过多寒暄
+      - 正文结构清晰，一个段落一个主题
+      - 需要对方行动的内容要明确指出
+      - 结尾礼貌但不啰嗦
+
+      根据关系和场景调整：
+      - 对上级：简洁、重点、有数据支撑
+      - 对同事：直接、友好、协作感
+      - 对客户：专业、热情、有服务意识
+
+      同时提供 1-2 条发送建议（如最佳发送时间、是否需要跟进等）。
+
+  generic:
+    prompt_template: |
+      请帮我{task}一封商务邮件。
+
+      **邮件目的**：{purpose}
+      **收件人**：{recipient}
+      **语气要求**：{tone}
+
+      **背景信息**：
+      {context}
+
+      请输出邮件主题和正文，并给出发送建议。
+
+safety:
+  risk_level: low
+  sandboxed: true
+  allowed_operations:
+    - read
+    - generate
+  max_input_size: 51200

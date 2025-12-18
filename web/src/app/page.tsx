@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -9,6 +9,8 @@ import {
   MessageSquare,
   Search,
   RefreshCw,
+  Package,
+  Grid3X3,
 } from "lucide-react";
 import {
   MessageItem,
@@ -17,11 +19,12 @@ import {
 } from "@/components/chat/message";
 import { ChatInput } from "@/components/chat/input";
 import { CapeConfigGrid, CapeCompactList } from "@/components/cape-card";
+import { PackList, PackBadge } from "@/components/pack-card";
 import { ModelSelector } from "@/components/model-selector";
 import { useChat } from "@/hooks/use-chat";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import type { Cape } from "@/data/types";
+import type { Cape, Pack } from "@/data/types";
 
 type ViewMode = "chat" | "capabilities";
 
@@ -32,11 +35,16 @@ export default function HomePage() {
   const [enabledCapes, setEnabledCapes] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Packs state
+  const [packs, setPacks] = useState<Pack[]>([]);
+  const [isLoadingPacks, setIsLoadingPacks] = useState(true);
+
   // Model state
   const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
 
   // View state
   const [viewMode, setViewMode] = useState<ViewMode>("chat");
+  const [capesViewMode, setCapesViewMode] = useState<"packs" | "grid">("packs");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Chat hook
@@ -47,7 +55,7 @@ export default function HomePage() {
       },
     });
 
-  // Load capes on mount
+  // Load capes and packs on mount
   useEffect(() => {
     async function loadCapes() {
       try {
@@ -62,7 +70,19 @@ export default function HomePage() {
       }
     }
 
+    async function loadPacks() {
+      try {
+        const data = await api.getPacks();
+        setPacks(data.packs);
+      } catch (error) {
+        console.error("Failed to load packs:", error);
+      } finally {
+        setIsLoadingPacks(false);
+      }
+    }
+
     loadCapes();
+    loadPacks();
   }, []);
 
   // Scroll to bottom on new messages
@@ -95,6 +115,40 @@ export default function HomePage() {
       } else {
         next.delete(capeId);
       }
+      return next;
+    });
+  };
+
+  // Build capes by pack mapping
+  const capesByPack = useMemo(() => {
+    const map = new Map<string, Cape[]>();
+    for (const pack of packs) {
+      const packCapes = capes.filter((c) => pack.cape_ids.includes(c.id));
+      map.set(pack.name, packCapes);
+    }
+    return map;
+  }, [capes, packs]);
+
+  // Get capes not in any pack
+  const unpackedCapes = useMemo(() => {
+    const packedIds = new Set(packs.flatMap((p) => p.cape_ids));
+    return capes.filter((c) => !packedIds.has(c.id));
+  }, [capes, packs]);
+
+  const handleEnablePackCapes = (packName: string) => {
+    const packCapes = capesByPack.get(packName) || [];
+    setEnabledCapes((prev) => {
+      const next = new Set(prev);
+      packCapes.forEach((c) => next.add(c.id));
+      return next;
+    });
+  };
+
+  const handleDisablePackCapes = (packName: string) => {
+    const packCapes = capesByPack.get(packName) || [];
+    setEnabledCapes((prev) => {
+      const next = new Set(prev);
+      packCapes.forEach((c) => next.delete(c.id));
       return next;
     });
   };
@@ -244,41 +298,104 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Stats */}
-              <div className="flex items-center gap-4 mb-6 text-sm">
-                <span className="text-gray-500">共 {capes.length} 个能力</span>
-                <span className="text-blue-600 font-medium">
-                  {enabledCount} 个已启用
-                </span>
-                {enabledCount < capes.length && (
+              {/* Stats & View Toggle */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-gray-500">共 {capes.length} 个能力</span>
+                  <span className="text-blue-600 font-medium">
+                    {enabledCount} 个已启用
+                  </span>
+                  {enabledCount < capes.length && (
+                    <button
+                      onClick={() =>
+                        setEnabledCapes(new Set(capes.map((c) => c.id)))
+                      }
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      全部启用
+                    </button>
+                  )}
+                  {enabledCount > 0 && (
+                    <button
+                      onClick={() => setEnabledCapes(new Set())}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      全部禁用
+                    </button>
+                  )}
+                </div>
+
+                {/* View mode toggle */}
+                <div className="flex items-center bg-gray-100 rounded-lg p-1">
                   <button
-                    onClick={() =>
-                      setEnabledCapes(new Set(capes.map((c) => c.id)))
-                    }
-                    className="text-gray-500 hover:text-gray-700"
+                    onClick={() => setCapesViewMode("packs")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-sm transition-colors flex items-center gap-1.5",
+                      capesViewMode === "packs"
+                        ? "bg-white shadow-sm text-blue-600"
+                        : "text-gray-500 hover:text-gray-700"
+                    )}
                   >
-                    全部启用
+                    <Package className="w-4 h-4" />
+                    能力包
                   </button>
-                )}
-                {enabledCount > 0 && (
                   <button
-                    onClick={() => setEnabledCapes(new Set())}
-                    className="text-gray-500 hover:text-gray-700"
+                    onClick={() => setCapesViewMode("grid")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-sm transition-colors flex items-center gap-1.5",
+                      capesViewMode === "grid"
+                        ? "bg-white shadow-sm text-blue-600"
+                        : "text-gray-500 hover:text-gray-700"
+                    )}
                   >
-                    全部禁用
+                    <Grid3X3 className="w-4 h-4" />
+                    全部
                   </button>
-                )}
+                </div>
               </div>
 
-              {/* Grid */}
-              {isLoadingCapes ? (
-                <div className="grid grid-cols-2 gap-4">
-                  {[1, 2, 3, 4].map((i) => (
+              {/* Content */}
+              {isLoadingCapes || isLoadingPacks ? (
+                <div className="space-y-4">
+                  {[1, 2].map((i) => (
                     <div
                       key={i}
-                      className="h-32 bg-white rounded-xl animate-pulse border border-gray-100"
+                      className="h-40 bg-white rounded-xl animate-pulse border border-gray-100"
                     />
                   ))}
+                </div>
+              ) : capesViewMode === "packs" ? (
+                <div className="space-y-6">
+                  {/* Pack List */}
+                  {packs.length > 0 && (
+                    <PackList
+                      packs={packs}
+                      capesByPack={capesByPack}
+                      enabledCapes={enabledCapes}
+                      onToggleCape={handleToggleCape}
+                      onEnablePackCapes={handleEnablePackCapes}
+                      onDisablePackCapes={handleDisablePackCapes}
+                    />
+                  )}
+
+                  {/* Unpacked capes */}
+                  {unpackedCapes.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-700 mb-3">
+                        其他能力 ({unpackedCapes.length})
+                      </h3>
+                      <CapeConfigGrid
+                        capes={unpackedCapes.filter(
+                          (cape) =>
+                            cape.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            cape.id.toLowerCase().includes(searchQuery.toLowerCase())
+                        )}
+                        enabledCapes={enabledCapes}
+                        onToggle={handleToggleCape}
+                        columns={2}
+                      />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <CapeConfigGrid
