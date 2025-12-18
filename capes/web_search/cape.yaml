@@ -1,29 +1,11 @@
 id: web-search
 name: Web Search
-version: "1.1.0"
-description: |
-  Search the internet for real-time information using DuckDuckGo.
-  Use when user asks about current events, weather, news, stock prices,
-  or any information that requires up-to-date data from the web.
+version: "2.1.0"
+description: 搜索互联网获取实时信息（Tavily + DDG fallback）
 
 metadata:
-  tags:
-    - search
-    - web
-    - realtime
-    - news
-    - weather
-  intents:
-    - search the web
-    - find information online
-    - look up current news
-    - check weather
-    - get latest updates
-    - what is happening
-    - 搜索
-    - 查询
-    - 天气
-    - 新闻
+  tags: [search, web, realtime]
+  intents: [搜索, 查询, 天气, 新闻, search, weather, news]
   source: native
 
 interface:
@@ -32,43 +14,30 @@ interface:
     properties:
       query:
         type: string
-        description: Search query keywords
-    required:
-      - query
+        description: 搜索关键词
+      max_results:
+        type: integer
+        description: 最大结果数（默认5）
+        default: 5
+      provider:
+        type: string
+        description: 搜索提供商（auto/tavily/duckduckgo）
+        default: auto
+    required: [query]
   output_schema:
     type: object
     properties:
-      results:
-        type: array
-        description: Search results with title, url, snippet
-      summary:
-        type: string
-        description: Summary of search findings
+      success: { type: boolean }
+      provider: { type: string }
+      results: { type: array }
+      answer: { type: string, description: "Tavily AI摘要" }
+      summary: { type: string }
 
 execution:
   type: tool
   entrypoint: web_search
-  timeout_seconds: 30
+  timeout_seconds: 15
 
 safety:
   risk_level: low
-  estimated_cost_usd: 0.001
-
-model_adapters:
-  openai:
-    model: gemini-2.5-flash
-    temperature: 0.3
-    system_prompt: |
-      You are a web search assistant with access to real-time internet search.
-
-      When answering questions:
-      1. First search the web for current information
-      2. Analyze and summarize the search results
-      3. Provide a clear, accurate answer based on the findings
-      4. Include relevant sources when appropriate
-
-      For weather queries: Search for "[city] weather today"
-      For news queries: Include recent dates in your search
-      For facts: Verify with multiple sources if possible
-
-      Always provide factual, up-to-date information based on search results.
+  estimated_cost_usd: 0.0001

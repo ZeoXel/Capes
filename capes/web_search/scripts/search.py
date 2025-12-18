@@ -7,13 +7,23 @@ import sys
 from typing import Dict, Any
 
 
-def search_web(query: str, max_results: int = 5) -> Dict[str, Any]:
+def _detect_region(query: str) -> str:
+    """Detect search region based on query language."""
+    # Check if query contains Chinese characters
+    for char in query:
+        if '\u4e00' <= char <= '\u9fff':
+            return "cn-zh"  # China - Chinese
+    return "wt-wt"  # Worldwide
+
+
+def search_web(query: str, max_results: int = 5, region: str = None) -> Dict[str, Any]:
     """
     Perform a web search using DuckDuckGo.
 
     Args:
         query: Search query string
         max_results: Maximum number of results to return
+        region: Search region (auto-detected if None)
 
     Returns:
         Dictionary with search results and summary
@@ -27,9 +37,12 @@ def search_web(query: str, max_results: int = 5) -> Dict[str, Any]:
 
         results = []
 
+        # Auto-detect region if not specified
+        search_region = region or _detect_region(query)
+
         ddgs = DDGS()
-        # Text search
-        for r in ddgs.text(query, max_results=max_results):
+        # Text search with region
+        for r in ddgs.text(query, region=search_region, max_results=max_results):
             results.append({
                 "title": r.get("title", ""),
                 "url": r.get("href", r.get("link", "")),
@@ -73,7 +86,7 @@ def search_web(query: str, max_results: int = 5) -> Dict[str, Any]:
         }
 
 
-def search_news(query: str, max_results: int = 5) -> Dict[str, Any]:
+def search_news(query: str, max_results: int = 5, region: str = None) -> Dict[str, Any]:
     """
     Search for recent news articles.
     """
@@ -85,8 +98,11 @@ def search_news(query: str, max_results: int = 5) -> Dict[str, Any]:
 
         results = []
 
+        # Auto-detect region if not specified
+        search_region = region or _detect_region(query)
+
         ddgs = DDGS()
-        for r in ddgs.news(query, max_results=max_results):
+        for r in ddgs.news(query, region=search_region, max_results=max_results):
             results.append({
                 "title": r.get("title", ""),
                 "url": r.get("url", r.get("link", "")),

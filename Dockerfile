@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件
-COPY pyproject.toml .
+# 复制项目代码
+COPY . .
 
 # 安装 Python 依赖
 RUN pip install --no-cache-dir --upgrade pip && \
@@ -36,12 +36,12 @@ RUN pip install --no-cache-dir --upgrade pip && \
     "python-docx>=1.1.0" \
     "PyPDF2>=3.0.0" \
     "pandas>=2.0.0" \
+    # Web 搜索 (Tavily primary + DDG fallback)
+    "tavily-python>=0.5.0" \
+    "duckduckgo-search>=6.0.0" \
     # 可选: embeddings (如需语义匹配)
     # "sentence-transformers>=2.2.2" \
-    && pip install --no-cache-dir -e .
-
-# 复制项目代码
-COPY . .
+    && pip install --no-cache-dir .
 
 # 创建存储目录
 RUN mkdir -p /app/storage/uploads /app/storage/outputs /app/storage/temp

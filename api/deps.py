@@ -98,10 +98,12 @@ def get_runtime() -> CapeRuntime:
 
 def _register_builtin_tools(runtime: CapeRuntime):
     """Register built-in tools for cape execution."""
-    from capes.web_search.scripts.search import search_web, search_news
+    from cape.tools.search import search_web, search_news, search
 
-    runtime.register_tool("web_search", search_web)
-    runtime.register_tool("news_search", search_news)
+    # Primary search tools
+    runtime.register_tool("search", search)           # Unified search with auto-provider
+    runtime.register_tool("web_search", search_web)   # Web search with summary
+    runtime.register_tool("news_search", search_news) # News search
 
 
 def reset_instances():

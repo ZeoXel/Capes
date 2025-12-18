@@ -222,10 +222,11 @@ class CapeToolkit:
     def _register_builtin_tools(self):
         """Register built-in tools for cape execution."""
         try:
-            from capes.web_search.scripts.search import search_web, search_news
+            from cape.tools.search import search_web, search_news, search
+            self.runtime.register_tool("search", search)
             self.runtime.register_tool("web_search", search_web)
             self.runtime.register_tool("news_search", search_news)
-            logger.info("Registered built-in tools: web_search, news_search")
+            logger.info("Registered built-in tools: search, web_search, news_search")
         except ImportError as e:
             logger.warning(f"Could not import built-in tools: {e}")
 
@@ -311,36 +312,42 @@ def create_langchain_agent(
     system_prompt = f"""你是一个智能助手，能够使用多种专业能力来帮助用户。
 
 ## 核心原则
-1. **语言一致性**：始终使用用户的语言回复。如果用户用中文提问，必须用中文回答。
-2. **直接回答**：对于简单问候或闲聊，直接回复，不需要使用工具。
-3. **工具选择**：根据用户意图选择最合适的工具。
+1. **语言一致性**：始终使用用户的语言回复
+2. **直接回答**：简单问候或闲聊直接回复，无需工具
+3. **基于结果回答**：使用工具后，必须基于返回结果生成人类友好的回答
 
 ## 可用能力
 {capabilities}
 
 ## 工具使用指南
 
-### cape_web_search - 网页搜索
-用于：天气查询、实时信息、事实查询
-- 天气查询时，提取城市名 + "天气" 作为搜索词
-- 例如："杭州明天天气怎么样" → 搜索 "杭州明天天气"
+### cape_web_search - 网页搜索（主要工具）
+用于：天气、新闻、实时信息、事实查询
+- 天气："杭州天气" → query="杭州天气"
+- 新闻："AI最新进展" → query="AI 最新进展 2024"
+- 事实："特斯拉股价" → query="特斯拉股价"
 
-### cape_news_search - 新闻搜索
-用于：新闻、时事、最新动态
-- 当用户询问"新闻"、"最新消息"、"发生了什么"时使用
-- 例如："今天有什么新闻" → 搜索 "今日新闻"
-- 例如："AI最新进展" → 搜索 "人工智能 最新进展"
+## 关键：处理工具返回结果
 
-### cape_code_review - 代码审查
-用于：审查代码、分析代码质量
+工具会返回 JSON 格式数据，包含：
+- `results`: 搜索结果列表（title, url, snippet）
+- `answer`: AI 生成的摘要（如有）
+- `summary`: 结果概要
 
-### cape_router - 自动路由
-当不确定使用哪个工具时，使用此工具自动匹配。
+**你必须：**
+1. 解析工具返回的 JSON 数据
+2. 提取关键信息（answer 或 results 中的内容）
+3. 用自然语言组织成人类友好的回答
+4. 不要直接输出原始 JSON
 
-## 回复要求
-1. 基于工具返回的结果，用自然语言组织答案
-2. 如果搜索结果不相关，承认并建议用户换个问法
-3. 回复要简洁有用，直接给出关键信息
+**示例：**
+工具返回: {{"answer": "杭州今天18°C，晴", "results": [...]}}
+你的回答: "杭州今天天气晴朗，气温约18°C，适合外出。"
+
+## 禁止行为
+- 不要说"无法获取信息"当工具已返回结果时
+- 不要输出原始 JSON 给用户
+- 不要在有结果时说"搜索失败"
 """
 
     # Create ReAct agent using langgraph

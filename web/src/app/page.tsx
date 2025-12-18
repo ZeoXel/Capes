@@ -11,7 +11,9 @@ import {
   RefreshCw,
   Package,
   Grid3X3,
+  LayoutDashboard,
 } from "lucide-react";
+import Link from "next/link";
 import {
   MessageItem,
   TypingIndicator,
@@ -247,6 +249,14 @@ export default function HomePage() {
                 <span className="text-xs font-medium">{enabledCount}</span>
               </button>
             </div>
+
+            <Link
+              href="/admin"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="管理后台"
+            >
+              <LayoutDashboard className="w-5 h-5 text-gray-500" />
+            </Link>
 
             <button
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
