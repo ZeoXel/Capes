@@ -24,7 +24,7 @@ import { ModelSelector } from "@/components/model-selector";
 import { useChat } from "@/hooks/use-chat";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import type { Cape, Pack } from "@/data/types";
+import type { Cape, Pack, FileInfo } from "@/data/types";
 
 type ViewMode = "chat" | "capabilities";
 
@@ -153,13 +153,22 @@ export default function HomePage() {
     });
   };
 
-  const handleSend = async (content: string) => {
+  const handleSend = async (content: string, files?: FileInfo[]) => {
     // Ensure we're in chat mode
     if (viewMode === "capabilities") setViewMode("chat");
 
+    // Build message with file references if provided
+    let messageContent = content;
+    if (files && files.length > 0) {
+      const fileList = files.map((f) => `- ${f.original_name}`).join("\n");
+      messageContent = files.length > 0
+        ? `${content}\n\n[附件]\n${fileList}`
+        : content;
+    }
+
     // Send message with selected model and enabled capes
     const enabledCapeIds = Array.from(enabledCapes);
-    await sendMessage(content, selectedModel, enabledCapeIds);
+    await sendMessage(messageContent, selectedModel, enabledCapeIds);
   };
 
   const handleRefreshCapes = async () => {
@@ -524,6 +533,7 @@ export default function HomePage() {
           onSend={handleSend}
           isStreaming={isStreaming}
           placeholder="描述你想做什么..."
+          sessionId={api.sessionId || undefined}
         />
       )}
     </div>

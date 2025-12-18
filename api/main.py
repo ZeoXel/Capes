@@ -23,7 +23,9 @@ from api.routes.capes import router as capes_router
 from api.routes.chat import router as chat_router
 from api.routes.models import router as models_router
 from api.routes.packs import router as packs_router
+from api.routes.files import router as files_router
 from api.schemas import StatsResponse
+from api.storage import init_storage, get_storage
 
 # Create app
 app = FastAPI(
@@ -49,6 +51,7 @@ app.include_router(capes_router)
 app.include_router(chat_router)
 app.include_router(models_router)
 app.include_router(packs_router)
+app.include_router(files_router)
 
 
 @app.get("/")
@@ -103,10 +106,23 @@ async def startup_event():
     registry = get_registry()
     runtime = get_runtime()
 
+    # Initialize file storage
+    storage = await init_storage()
+
     print(f"✅ Loaded {registry.count()} Capes")
     print(f"✅ Runtime initialized with {len(runtime._tool_registry)} tools")
+    print(f"✅ File storage initialized at {storage.config.base_dir}")
     print(f"✅ Default model: {settings.default_model}")
     print("🎉 Cape API ready!")
+
+
+# Shutdown event
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on shutdown."""
+    storage = get_storage()
+    await storage.shutdown()
+    print("👋 Cape API shutdown complete")
 
 
 if __name__ == "__main__":

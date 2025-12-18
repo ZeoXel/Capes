@@ -1,0 +1,14 @@
+{
+  "file_id": "541792ec-5bee-4b9b-87ee-0a41291de45d",
+  "original_name": "test_file.txt",
+  "content_type": "text/plain",
+  "size_bytes": 24,
+  "checksum": "7b3a729d4ba3d5dd4fea368ef3308942",
+  "status": "deleted",
+  "session_id": "test-session",
+  "created_at": "2025-12-18T03:32:28.689121",
+  "expires_at": "2025-12-19T03:32:28.689121",
+  "cape_id": null,
+  "is_output": false,
+  "source_file_id": null
+}

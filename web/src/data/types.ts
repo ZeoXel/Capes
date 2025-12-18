@@ -70,3 +70,51 @@ export interface PacksResponse {
   total_packs: number;
   total_capes_in_packs: number;
 }
+
+// File types
+export type FileStatus = "uploaded" | "processing" | "completed" | "expired" | "deleted";
+
+export interface FileInfo {
+  file_id: string;
+  original_name: string;
+  content_type: string;
+  size_bytes: number;
+  status: FileStatus;
+  session_id?: string;
+  created_at: string;
+  expires_at: string;
+  cape_id?: string;
+  is_output: boolean;
+  download_url: string;
+}
+
+export interface UploadResponse {
+  files: FileInfo[];
+  session_id: string;
+  total_size_bytes: number;
+}
+
+export interface SessionFilesResponse {
+  session_id: string;
+  files: FileInfo[];
+  total_files: number;
+  total_size_bytes: number;
+}
+
+export interface ProcessResponse {
+  success: boolean;
+  input_file: FileInfo;
+  output_files: FileInfo[];
+  execution_time_ms: number;
+  error?: string;
+  cape_id: string;
+  session_id: string;
+}
+
+export interface StorageStats {
+  total_files: number;
+  total_sessions: number;
+  total_size_mb: number;
+  by_status: Record<string, number>;
+  by_type: Record<string, number>;
+}

@@ -1,16 +1,27 @@
 "use client";
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Paperclip, X, Sparkles, StopCircle } from "lucide-react";
+import { Send, Paperclip, X, Sparkles, StopCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api";
+import type { FileInfo } from "@/data/types";
+import { PendingFileItem, FileItem } from "./file-attachment";
+
+interface PendingFile {
+  id: string;
+  file: File;
+  progress: number;
+  error?: string;
+}
 
 interface ChatInputProps {
-  onSend: (message: string) => void;
+  onSend: (message: string, files?: FileInfo[]) => void;
   onStop?: () => void;
   disabled?: boolean;
   isStreaming?: boolean;
   placeholder?: string;
+  sessionId?: string;
 }
 
 export function ChatInput({
@@ -19,11 +30,15 @@ export function ChatInput({
   disabled,
   isStreaming,
   placeholder,
+  sessionId,
 }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [isFocused, setIsFocused] = useState(false);
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<FileInfo[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -40,10 +55,11 @@ export function ChatInput({
   }, []);
 
   const handleSubmit = () => {
-    if (!value.trim() || disabled || isStreaming) return;
-    onSend(value.trim());
+    if ((!value.trim() && uploadedFiles.length === 0) || disabled || isStreaming || isUploading) return;
+    onSend(value.trim(), uploadedFiles.length > 0 ? uploadedFiles : undefined);
     setValue("");
-    setAttachments([]);
+    setUploadedFiles([]);
+    setPendingFiles([]);
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -54,16 +70,61 @@ export function ChatInput({
   };
 
   const handleAttach = () => {
-    // Placeholder for file attachment
-    console.log("Attach file");
+    fileInputRef.current?.click();
   };
 
-  const removeAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Reset input
+    e.target.value = "";
+
+    // Add to pending
+    const newPending: PendingFile[] = files.map((file) => ({
+      id: Math.random().toString(36).slice(2),
+      file,
+      progress: 0,
+    }));
+    setPendingFiles((prev) => [...prev, ...newPending]);
+    setIsUploading(true);
+
+    try {
+      // Upload files
+      const response = await api.uploadFiles(files, sessionId);
+
+      // Update state
+      setUploadedFiles((prev) => [...prev, ...response.files]);
+      setPendingFiles((prev) =>
+        prev.filter((p) => !newPending.find((np) => np.id === p.id))
+      );
+    } catch (error) {
+      // Mark as error
+      setPendingFiles((prev) =>
+        prev.map((p) =>
+          newPending.find((np) => np.id === p.id)
+            ? { ...p, error: error instanceof Error ? error.message : "上传失败" }
+            : p
+        )
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  }, [sessionId]);
+
+  const removeUploadedFile = (fileId: string) => {
+    setUploadedFiles((prev) => prev.filter((f) => f.file_id !== fileId));
+    // Optionally delete from server
+    api.deleteFile(fileId).catch(console.error);
   };
 
-  const hasContent = value.trim().length > 0;
+  const removePendingFile = (id: string) => {
+    setPendingFiles((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const hasContent = value.trim().length > 0 || uploadedFiles.length > 0;
   const showStopButton = isStreaming && onStop;
+  const hasAttachments = uploadedFiles.length > 0 || pendingFiles.length > 0;
 
   return (
     <div className="sticky bottom-0 pt-4 pb-4 px-4">
@@ -82,9 +143,19 @@ export function ChatInput({
             isFocused ? "border-blue-400" : "border-gray-200"
           )}
         >
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.csv,.json,.png,.jpg,.jpeg,.gif,.webp"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
           {/* Attachments preview */}
           <AnimatePresence>
-            {attachments.length > 0 && (
+            {hasAttachments && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -92,23 +163,22 @@ export function ChatInput({
                 className="px-3 pt-3 pb-1 border-b border-gray-100"
               >
                 <div className="flex flex-wrap gap-2">
-                  {attachments.map((name, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm text-gray-600"
-                    >
-                      <Paperclip className="w-3.5 h-3.5" />
-                      <span className="max-w-[120px] truncate">{name}</span>
-                      <button
-                        onClick={() => removeAttachment(i)}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </motion.div>
+                  {/* Uploaded files */}
+                  {uploadedFiles.map((file) => (
+                    <FileItem
+                      key={file.file_id}
+                      file={file}
+                      onRemove={() => removeUploadedFile(file.file_id)}
+                      compact
+                    />
+                  ))}
+                  {/* Pending files */}
+                  {pendingFiles.map((pending) => (
+                    <PendingFileItem
+                      key={pending.id}
+                      pending={pending}
+                      onRemove={() => removePendingFile(pending.id)}
+                    />
                   ))}
                 </div>
               </motion.div>
@@ -122,7 +192,7 @@ export function ChatInput({
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleAttach}
-              disabled={disabled || isStreaming}
+              disabled={disabled || isStreaming || isUploading}
               className={cn(
                 "flex-shrink-0 p-2.5 rounded-xl transition-colors",
                 "text-gray-400 hover:text-gray-600 hover:bg-gray-100",
@@ -131,7 +201,11 @@ export function ChatInput({
               )}
               title="附加文件"
             >
-              <Paperclip className="w-5 h-5" />
+              {isUploading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Paperclip className="w-5 h-5" />
+              )}
             </motion.button>
 
             {/* Textarea */}
@@ -179,13 +253,13 @@ export function ChatInput({
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    whileHover={{ scale: hasContent && !disabled ? 1.05 : 1 }}
-                    whileTap={{ scale: hasContent && !disabled ? 0.95 : 1 }}
+                    whileHover={{ scale: hasContent && !disabled && !isUploading ? 1.05 : 1 }}
+                    whileTap={{ scale: hasContent && !disabled && !isUploading ? 0.95 : 1 }}
                     onClick={handleSubmit}
-                    disabled={!hasContent || disabled}
+                    disabled={!hasContent || disabled || isUploading}
                     className={cn(
                       "flex-shrink-0 p-2.5 rounded-xl transition-all duration-200 focus:outline-none focus:ring-0",
-                      hasContent && !disabled
+                      hasContent && !disabled && !isUploading
                         ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm shadow-blue-200"
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     )}

@@ -1,0 +1,89 @@
+# Document Pack - 文档处理包
+# 基于 Anthropic Claude Skills 的专业文档处理能力包
+# 源自: https://github.com/anthropics/skills/tree/main/document-skills
+
+name: document-pack
+display_name: 专业文档处理包
+version: 1.0.0
+icon: file-text
+color: "#8B5CF6"
+
+description: |
+  专业的文档处理能力包，源自 Anthropic Claude 官方技能库。
+  支持 Excel/CSV、Word、PowerPoint、PDF 四大主流文档格式的
+  创建、编辑、分析和转换处理。
+
+source:
+  type: claude_skills
+  repository: anthropics/skills
+  path: document-skills
+  version: main
+
+target_users:
+  - 数据分析师
+  - 办公人员
+  - 文档处理专员
+  - 开发者
+  - 内容创作者
+
+scenarios:
+  - Excel 表格创建与公式计算
+  - Word 文档编辑与修订追踪
+  - PPT 演示文稿制作与模板应用
+  - PDF 表单填写与文档合并
+  - 数据导入导出与格式转换
+  - 文档内容提取与分析
+
+capes:
+  - xlsx
+  - docx
+  - pptx
+  - pdf
+
+capabilities:
+  xlsx:
+    - 创建/编辑 Excel 文件
+    - 公式与格式化
+    - pandas 数据分析
+    - openpyxl 操作
+    - 公式重新计算
+  docx:
+    - 创建/编辑 Word 文档
+    - 修订追踪 (Track Changes)
+    - 评论和批注
+    - OOXML 底层操作
+    - Pandoc 转换
+  pptx:
+    - 创建/编辑演示文稿
+    - HTML 转 PPTX
+    - 模板应用
+    - 缩略图生成
+    - 文本替换
+  pdf:
+    - 读取/合并/拆分 PDF
+    - 表格提取
+    - 表单填写
+    - 水印添加
+    - 图像提取
+
+dependencies:
+  required:
+    - openpyxl
+    - pandas
+    - python-docx
+    - python-pptx
+    - pypdf
+    - pdfplumber
+    - reportlab
+  optional:
+    - pillow
+    - pdf2image
+    - pytesseract
+    - pandoc
+    - libreoffice
+    - poppler-utils
+
+runtime:
+  sandbox: process
+  timeout_seconds: 120
+  network_enabled: false

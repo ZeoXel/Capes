@@ -1,0 +1,180 @@
+# PPTX Cape - PowerPoint 演示文稿处理
+# 源自 Anthropic Claude Skills: document-skills/pptx
+
+id: pptx
+name: PowerPoint 演示文稿处理
+version: "1.0.0"
+description: >
+  演示文稿创建、编辑和分析能力。支持创建新演示文稿、修改编辑内容、
+  处理布局、添加评论或演讲者备注等演示任务。
+
+metadata:
+  author: Anthropic
+  license: Proprietary
+  source: skill
+  source_ref: anthropics/skills/document-skills/pptx
+  tags:
+    - powerpoint
+    - presentation
+    - pptx
+    - slides
+    - template
+  intents:
+    - 创建PPT
+    - 编辑演示文稿
+    - 制作幻灯片
+    - 应用模板
+    - 生成缩略图
+  examples:
+    - "创建一份新的演示文稿"
+    - "编辑现有PPT的内容"
+    - "基于模板制作幻灯片"
+    - "生成PPT缩略图预览"
+
+interface:
+  input_schema:
+    type: object
+    properties:
+      task:
+        type: string
+        description: 演示文稿处理任务
+      file_path:
+        type: string
+        description: 输入文件路径
+      output_path:
+        type: string
+        description: 输出文件路径
+      template_path:
+        type: string
+        description: 模板文件路径
+      content:
+        type: object
+        description: 幻灯片内容
+    required:
+      - task
+  output_schema:
+    type: object
+    properties:
+      result:
+        type: string
+        description: 处理结果
+      output_file:
+        type: string
+        description: 输出文件路径
+      thumbnails:
+        type: array
+        description: 生成的缩略图路径
+
+execution:
+  type: hybrid
+  entrypoint: scripts/inventory.py
+  timeout_seconds: 180
+  tools_allowed:
+    - file_read
+    - file_write
+    - code_execute
+    - bash
+
+model_adapters:
+  claude:
+    model_hint: claude-3-5-sonnet
+    system_prompt: |
+      你是 PowerPoint 演示文稿处理专家。
+
+      ## 创建新演示文稿（无模板）
+
+      使用 **html2pptx** 工作流将 HTML 幻灯片转换为 PowerPoint。
+
+      ### 设计原则
+      1. **考虑主题内容**: 演示文稿是关于什么的？
+      2. **检查品牌**: 如果提到公司/组织，考虑品牌颜色
+      3. **匹配内容选择配色**: 选择反映主题的颜色
+
+      ### 布局提示
+      - **双栏布局（推荐）**: 标题横跨全宽，下方两栏
+      - **全幅布局**: 让图表/表格占据整个幻灯片
+      - **永远不要垂直堆叠**: 不要将图表放在文本下方
+
+      ## 使用模板创建
+
+      ### 工作流程
+      1. **提取模板文本并创建缩略图**
+         ```bash
+         python -m markitdown template.pptx > template-content.md
+         python scripts/thumbnail.py template.pptx
+         ```
+
+      2. **分析模板并保存清单**
+
+      3. **基于模板清单创建大纲**
+
+      4. **使用 rearrange.py 复制/重排/删除幻灯片**
+         ```bash
+         python scripts/rearrange.py template.pptx working.pptx 0,34,34,50,52
+         ```
+
+      5. **使用 inventory.py 提取所有文本**
+         ```bash
+         python scripts/inventory.py working.pptx text-inventory.json
+         ```
+
+      6. **生成替换文本并保存到 JSON 文件**
+
+      7. **使用 replace.py 应用替换**
+         ```bash
+         python scripts/replace.py working.pptx replacement-text.json output.pptx
+         ```
+
+      ## 编辑现有演示文稿
+
+      使用 OOXML 格式：解包 → 编辑 XML → 验证 → 打包
+
+      ## 代码风格
+      - 写简洁代码
+      - 避免冗余操作
+
+  openai:
+    model_hint: gpt-4o
+    system_prompt: |
+      You are a PowerPoint presentation expert.
+
+      Key workflows:
+      1. Creating without template: Use html2pptx
+      2. Creating with template: Use rearrange.py + inventory.py + replace.py
+      3. Editing existing: Use OOXML manipulation
+
+      Design principles:
+      - Choose colors that match the subject matter
+      - Use two-column layouts for charts/tables
+      - Never stack charts below text
+
+  generic:
+    prompt_template: |
+      请帮我处理 PowerPoint 演示文稿任务：
+      {task}
+
+      输入文件：{file_path}
+      模板文件：{template_path}
+      输出到：{output_path}
+
+      请根据任务选择合适的工作流程。
+
+code_adapter:
+  scripts:
+    - scripts/thumbnail.py
+    - scripts/rearrange.py
+    - scripts/inventory.py
+    - scripts/replace.py
+  dependencies:
+    - python-pptx
+    - pillow
+    - defusedxml
+  runtime: python
+
+safety:
+  risk_level: medium
+  audit_log: true
+  allowed_operations:
+    - read
+    - write
+    - execute

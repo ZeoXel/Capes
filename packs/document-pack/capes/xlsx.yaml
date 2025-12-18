@@ -1,0 +1,152 @@
+# XLSX Cape - Excel 表格处理
+# 源自 Anthropic Claude Skills: document-skills/xlsx
+
+id: xlsx
+name: Excel 表格处理
+version: "1.0.0"
+description: >
+  综合性表格创建、编辑和分析能力，支持公式、格式化、数据分析和可视化。
+  适用于创建新表格、读取分析数据、修改现有表格（保留公式）、数据可视化和公式重新计算。
+
+metadata:
+  author: Anthropic
+  license: Proprietary
+  source: skill
+  source_ref: anthropics/skills/document-skills/xlsx
+  tags:
+    - excel
+    - spreadsheet
+    - data
+    - analysis
+    - xlsx
+    - csv
+    - tsv
+  intents:
+    - 创建表格
+    - 编辑Excel
+    - 数据分析
+    - 添加公式
+    - 格式化表格
+    - 读取表格
+  examples:
+    - "创建一个带公式的Excel表格"
+    - "分析这个CSV文件的数据"
+    - "给表格添加SUM公式"
+    - "修改这个Excel的格式"
+
+interface:
+  input_schema:
+    type: object
+    properties:
+      task:
+        type: string
+        description: 表格处理任务描述
+      file_path:
+        type: string
+        description: 输入文件路径（可选）
+      output_path:
+        type: string
+        description: 输出文件路径（可选）
+      data:
+        type: object
+        description: 要写入的数据
+    required:
+      - task
+  output_schema:
+    type: object
+    properties:
+      result:
+        type: string
+        description: 处理结果描述
+      output_file:
+        type: string
+        description: 输出文件路径
+      data:
+        type: object
+        description: 提取或处理的数据
+
+execution:
+  type: hybrid
+  timeout_seconds: 120
+  tools_allowed:
+    - file_read
+    - file_write
+    - code_execute
+
+model_adapters:
+  claude:
+    model_hint: claude-3-5-sonnet
+    system_prompt: |
+      你是 Excel 表格处理专家。遵循以下准则：
+
+      ## 输出要求
+
+      ### 零公式错误
+      - 所有 Excel 模型必须零公式错误（#REF!, #DIV/0!, #VALUE!, #N/A, #NAME?）
+
+      ### 保留现有模板
+      - 修改文件时严格匹配现有格式、样式和约定
+      - 现有模板约定始终优先于这些指南
+
+      ## 金融模型颜色标准
+      - **蓝色文本 (0,0,255)**: 硬编码输入和用户可变数值
+      - **黑色文本 (0,0,0)**: 所有公式和计算
+      - **绿色文本 (0,128,0)**: 同一工作簿内其他工作表的链接
+      - **红色文本 (255,0,0)**: 外部文件链接
+      - **黄色背景 (255,255,0)**: 需要关注的关键假设
+
+      ## 数字格式标准
+      - **年份**: 文本格式（"2024" 而非 "2,024"）
+      - **货币**: $#,##0 格式，标题中注明单位（"Revenue ($mm)"）
+      - **零值**: 使用 "-" 显示
+      - **百分比**: 默认 0.0% 格式
+      - **倍数**: 0.0x 格式
+      - **负数**: 使用括号 (123) 而非 -123
+
+      ## 关键：使用公式而非硬编码值
+      始终使用 Excel 公式而不是在 Python 中计算后硬编码。
+
+      ### 正确示例
+      ```python
+      sheet['B10'] = '=SUM(B2:B9)'
+      sheet['C5'] = '=(C4-C2)/C2'
+      sheet['D20'] = '=AVERAGE(D2:D19)'
+      ```
+
+      ## 库选择
+      - **pandas**: 数据分析、批量操作
+      - **openpyxl**: 复杂格式、公式、Excel特性
+
+      ## 代码风格
+      - 写简洁的 Python 代码
+      - 避免冗余操作和不必要的打印语句
+
+  openai:
+    model_hint: gpt-4o
+    system_prompt: |
+      You are an Excel spreadsheet expert. Follow these guidelines:
+
+      1. Zero formula errors - all models must have no #REF!, #DIV/0!, etc.
+      2. Use Excel formulas instead of hardcoded values
+      3. Apply standard color coding for financial models
+      4. Use pandas for data analysis, openpyxl for formatting/formulas
+      5. Write concise Python code
+
+  generic:
+    prompt_template: |
+      请帮我处理 Excel 表格任务：
+      {task}
+
+      如有输入文件：{file_path}
+      输出到：{output_path}
+
+      请使用 Python + pandas/openpyxl 完成任务，
+      并确保使用公式而非硬编码值。
+
+safety:
+  risk_level: medium
+  audit_log: true
+  allowed_operations:
+    - read
+    - write
+    - execute
